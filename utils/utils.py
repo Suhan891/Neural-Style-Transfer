@@ -17,7 +17,7 @@ class ImageDataset(Dataset):
         image_path = os.path.join(self.root, self.files[index])
         image = self.load_image(image_path=image_path)
         if(self.transform):
-            self.transform(image)
+            image = self.transform(image)
         return image
         
     def load_image(self, image_path: str):
