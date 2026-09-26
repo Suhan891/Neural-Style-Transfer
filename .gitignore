@@ -1,0 +1,6 @@
+uv.lock
+.env
+.venv
+
+#Project Outputs
+/experiments/experiment1
