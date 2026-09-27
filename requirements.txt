@@ -1,5 +1,3 @@
-torch
-numpy
 pillow
-torchvision
 python-dotenv
+tqdm

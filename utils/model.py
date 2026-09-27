@@ -1,4 +1,3 @@
-from typing import Any
 import torch
 from torch import nn
 
@@ -73,9 +72,9 @@ class Encoder(nn.Module):
         
         for enc in ["enc_1", "enc_2", "enc_3", "enc_4"]:
             for param in getattr(self, enc).parameters():
-                param.required_grad = True
+                param.requires_grad = False
         
-    def forward(self, input, is_train):
+    def forward(self, input, is_train= False):
         h1 = self.enc_1(input)
         h2 = self.enc_2(h1)
         h3 = self.enc_3(h2)
@@ -88,7 +87,7 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
-        self.net = nn.Sequential(
+        self.decode = nn.Sequential(
             nn.ReflectionPad2d((1, 1, 1, 1)),
             nn.Conv2d(512, 256, (3, 3)),
             nn.ReLU(),
@@ -121,4 +120,4 @@ class Decoder(nn.Module):
         )
 
     def forward(self, input):
-        return self.net(input)
+        return self.decode(input)

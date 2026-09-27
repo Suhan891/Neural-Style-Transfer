@@ -1,6 +1,11 @@
 uv.lock
 .env
 .venv
+/__pycache__
+
+/static
+/data
+/model
 
 #Project Outputs
-/experiments/experiment1
+/experiments

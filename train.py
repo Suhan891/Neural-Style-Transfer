@@ -12,7 +12,6 @@ from torchvision.utils import save_image
 
 load_dotenv()
 
-
 def pass_arguments():
     parser = argparse.ArgumentParser()
 
@@ -35,7 +34,7 @@ def pass_arguments():
         help="Location of pre-trained VGG",
     )  # Taking the available weights on pth
     parser.add_argument(
-        "--experiment", type=str, default="experiment1", help="Name of experiment"
+        "--experiment", type=str, default="project", help="Name of experiment"
     )
     parser.add_argument(
         "--final_size", type=int, default=256, help="Size of final image"
@@ -46,7 +45,7 @@ def pass_arguments():
     parser.add_argument(
         "--style_size", type=int, default=512, help="Size of style image"
     )
-    parser.add_argument("--batch_size", type=int, default=2, help="Batch Size")
+    parser.add_argument("--batch_size", type=int, default=10, help="Batch Size")
     parser.add_argument("--crop", action="store_true", default=True, help="Crop image")
     parser.add_argument('--lr', type=float, default=1e-4,
                             help='Learning rate')
@@ -54,7 +53,7 @@ def pass_arguments():
                         help='Learning rate decay')
     parser.add_argument('--wt_decay', type=float, default=0.01,
                             help='Weight decay')
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=12,
                                 help='Epochs')
     parser.add_argument('--content_weight', type=float, default=1.0,
                         help='Content weight')
@@ -62,16 +61,16 @@ def pass_arguments():
                         help='Style weight')
     parser.add_argument('--log_interval', type=int, default=1,
                         help='Log interval')
-    parser.add_argument('--save_interval', type=int, default=2,
+    parser.add_argument('--save_interval', type=int, default=1,
                         help='Save interval')
     
     parser.add_argument('--resume', action='store_true', default=False,
                         help='Resume training')
     
-    parser.add_argument('--decoder_path', type=str, default=None,
+    parser.add_argument('--decoder_path', type=str, default=os.getenv("DECODER"),
                         help='Path to decoder checkpoint')
     
-    parser.add_argument('--optimizer_path', type=str, default=None,
+    parser.add_argument('--optimizer_path', type=str, default=os.getenv("OPTIMIZER"),
                         help='Path to optimizer checkpoint')
     return parser.parse_args()
 
@@ -80,7 +79,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     args = pass_arguments()
 
-    save_dir = Path("experiments") / args.experiment
+    save_dir = Path("model") / args.experiment
     save_dir.mkdir(parents=True, exist_ok=True)
 
     with open(save_dir / "args.txt", "w") as f:
@@ -98,16 +97,16 @@ def main():
         shuffle=True,
         pin_memory=True,
         batch_size=args.batch_size,
-        drop_last=True,
         num_workers=0,
+        drop_last=True
     )
     style_dataloader = DataLoader(
         style_dataset,
         shuffle=True,
         pin_memory=True,
         batch_size=args.batch_size,
-        drop_last=True,
         num_workers=0,
+        drop_last=True
     )
 
     encoder = Encoder(args.vgg).to(device)
@@ -185,7 +184,7 @@ def main():
             running_loss += loss.item()
             running_content_loss += loss_c.item()
             running_style_loss += loss_s.item()
-            
+                    
         
         scheduler.step()
         
@@ -197,15 +196,30 @@ def main():
         if (epoch+1) % args.log_interval == 0:
             tqdm.write(f'Iter {epoch+1}: Loss:{running_loss:4f}, Content Loss: {running_content_loss:4f}, Style Loss: {running_style_loss:4f}')
             
-        if (epoch + 1) % args.log_interval == 0 and g is not None and style_batch is not None and content_batch is not None:
-            torch.save(decoder.state_dict(), save_dir / f'decoder_{epoch+1}.pth')
-            torch.save(optimizer.state_dict(), save_dir / f'optimizer_{epoch+1}.pth')
+        if (epoch + 1) % args.save_interval == 0 and g is not None and style_batch is not None and content_batch is not None:
+            # torch.save(decoder.state_dict(), save_dir / f'decoder_{epoch+1}.pth')
+            # torch.save(optimizer.state_dict(), save_dir / f'optimizer_{epoch+1}.pth')
+            # torch.save(scheduler.state_dict(), save_dir / f'scheduler_{epoch+1}.pth')
+            torch.save({
+                "epoch": epoch,
+                "model": decoder.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "scheduler": scheduler.state_dict(),
+            }, save_dir / f"train_{epoch+1}.pth"
+            )
+            
+            torch.save({
+                "epoch": epoch,
+                "model": decoder.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "scheduler": scheduler.state_dict(),
+            }, save_dir / "trained_model.pth")
 
             with torch.no_grad():
                 output = torch.cat([content_batch, style_batch, g], dim=0)
                 save_image(output, save_dir / f'output_{epoch+1}.png', nrow=args.batch_size)
+        
             
-
 
 if __name__ == "__main__":
     main()
