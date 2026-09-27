@@ -1,0 +1,1 @@
+export const AUTH_COOKIE_NAME = "nst_access_token";
