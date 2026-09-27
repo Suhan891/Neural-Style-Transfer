@@ -45,7 +45,7 @@ def pass_arguments():
     parser.add_argument(
         "--style_size", type=int, default=512, help="Size of style image"
     )
-    parser.add_argument("--batch_size", type=int, default=10, help="Batch Size")
+    parser.add_argument("--batch_size", type=int, default=11, help="Batch Size")
     parser.add_argument("--crop", action="store_true", default=True, help="Crop image")
     parser.add_argument('--lr', type=float, default=1e-4,
                             help='Learning rate')
@@ -53,9 +53,9 @@ def pass_arguments():
                         help='Learning rate decay')
     parser.add_argument('--wt_decay', type=float, default=0.01,
                             help='Weight decay')
-    parser.add_argument('--epochs', type=int, default=12,
+    parser.add_argument('--epochs', type=int, default=10,
                                 help='Epochs')
-    parser.add_argument('--content_weight', type=float, default=1.0,
+    parser.add_argument('--content_weight', type=float, default=2,
                         help='Content weight')
     parser.add_argument('--style_weight', type=float, default=5,
                         help='Style weight')
@@ -64,7 +64,7 @@ def pass_arguments():
     parser.add_argument('--save_interval', type=int, default=1,
                         help='Save interval')
     
-    parser.add_argument('--resume', action='store_true', default=False,
+    parser.add_argument('--resume', action='store_true', default=True,
                         help='Resume training')
     
     parser.add_argument('--decoder_path', type=str, default=os.getenv("DECODER"),
@@ -73,7 +73,6 @@ def pass_arguments():
     parser.add_argument('--optimizer_path', type=str, default=os.getenv("OPTIMIZER"),
                         help='Path to optimizer checkpoint')
     return parser.parse_args()
-
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -115,14 +114,17 @@ def main():
     optimizer = optim.Adam(
         decoder.parameters(), lr=args.lr, weight_decay=args.wt_decay
     )  # Taken only decoder as encoder is frozen
-    
-    if args.resume:
-        decoder.load_state_dict(torch.load(args.decoder_path, map_location=device, weights_only=True))
-        optimizer.load_state_dict(torch.load(args.optimizer_path, map_location=device, weights_only=True))
         
     scheduler = optim.lr_scheduler.LambdaLR(
         optimizer=optimizer, lr_lambda=lambda epoch: 1.0 / (1.0 + args.lr_decay * epoch) # Learning rate get updated with progress for each epoch
     )
+    start_epoch: int = 0
+    if args.resume:
+        checkpointer = torch.load(save_dir / "trained_model.pth", map_location=device, weights_only=True)
+        decoder.load_state_dict(checkpointer["model"])
+        optimizer.load_state_dict(checkpointer["optimizer"])
+        scheduler.load_state_dict(checkpointer["scheduler"])
+        start_epoch = checkpointer["epoch"] + 1
     
     print("Training...")
     
@@ -134,7 +136,8 @@ def main():
     running_content_loss = None
     running_style_loss = None
     
-    for epoch in range(args.epochs):
+    for epoch in range(start_epoch, args.epochs):
+        print(f"Epoch {epoch+1}/{args.epochs}")
         progress_bar = tqdm(zip(content_dataloader, style_dataloader), total=min(len(content_dataloader), len(style_dataloader))) # Effictively handles 
         
         running_loss = 0

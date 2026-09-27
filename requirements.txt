@@ -1,3 +1,14 @@
 pillow
 python-dotenv
 tqdm
+fastapi
+python-multipart
+pydantic
+email-validator
+logger
+loguru
+python-jose[cryptography]
+pydantic_settings
+supabase
+cloudinary 
+uvicorn[standard]
