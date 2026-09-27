@@ -6,7 +6,10 @@ const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 ).replace(/\/+$/, "");
 
-type BackendEndpoint = "/user/access" | "/agent/generate";
+type BackendEndpoint =
+  | "/user/access"
+  | "/agent/generate"
+  | "/agent/remove";
 
 export async function forwardAuthenticatedRequest(
   request: Request,
@@ -23,9 +26,13 @@ export async function forwardAuthenticatedRequest(
   const headers = new Headers({ "Bearer-auth": token });
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
+  const backendUrl = new URL(endpoint, API_BASE_URL);
+  new URL(request.url).searchParams.forEach((value, key) => {
+    backendUrl.searchParams.append(key, value);
+  });
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(backendUrl, {
       method: request.method,
       headers,
       body:

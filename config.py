@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     
     # Parsers related
     VGG_PATH: str = os.getenv("VGG_PATH", "./model/vgg_normalised.pth")
-    TRAINED_MODEL: str = os.getenv("TRAINED_MODEL", "../model/project/train_6.pth")
+    TRAINED_MODEL: str = os.getenv("TRAINED_MODEL", "../model/project/trained_model.pth")
     
     CLOUDINARY_NAME: str = os.getenv("CLOUDINARY_NAME", "")
     CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "")

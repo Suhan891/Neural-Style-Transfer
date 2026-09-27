@@ -24,6 +24,8 @@ export function useGenerationWorkspace() {
   const [history, setHistory] = useState<GenerationHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -169,6 +171,43 @@ export function useGenerationWorkspace() {
     }
   };
 
+  const deleteImage = async (image: GenerationHistoryItem): Promise<boolean> => {
+    if (!isAuthenticated || deletingImageId) return false;
+
+    setDeletingImageId(image.id);
+    setDeleteError(null);
+    try {
+      const response = await fetch(
+        `/api/generations?img_id=${encodeURIComponent(image.id)}`,
+        { method: "DELETE" },
+      );
+      if (response.status === 401) {
+        setIsAuthenticated(false);
+        router.replace("/login");
+        return false;
+      }
+      if (!response.ok) {
+        const payload: unknown = await response.json().catch(() => null);
+        const message =
+          payload && typeof payload === "object" && "detail" in payload &&
+          typeof payload.detail === "string"
+            ? payload.detail
+            : `Image deletion failed (error ${response.status}).`;
+        setDeleteError(message);
+        return false;
+      }
+
+      setHistory((current) => current.filter((item) => item.id !== image.id));
+      if (resultUrl === image.generated_image) setResultUrl(null);
+      return true;
+    } catch {
+      setDeleteError("Couldn't reach the server. The image was not removed.");
+      return false;
+    } finally {
+      setDeletingImageId(null);
+    }
+  };
+
   return {
     isAuthenticated,
     contentSlot,
@@ -180,10 +219,13 @@ export function useGenerationWorkspace() {
     history,
     historyLoading,
     historyError,
+    deletingImageId,
+    deleteError,
     canGenerate,
     setAlpha,
     selectImage,
     clearImage,
     generateImage,
+    deleteImage,
   };
 }

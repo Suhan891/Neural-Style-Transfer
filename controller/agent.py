@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form
+from fastapi import APIRouter, Depends, File, Form, Query
 from validations.create_image import ValidatedImage
 from typing import Annotated
 from service.image_handling import ImageService
@@ -21,3 +21,10 @@ def upload_image(
         alpha=alpha,
         user_id=user_id,
     )
+
+@router.delete("/remove")
+def remove(
+    img_id: Annotated[str, Query(min_length=1, description="Image ID to remove")],
+    user_id: Annotated[str, Depends(get_current_user_id)],
+) -> dict[str, str | bool]:
+    return image_service.remove_image(image_id=img_id, user_id=user_id)

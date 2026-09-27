@@ -1,6 +1,7 @@
 from service.agent import AgentModel
 import cloudinary
 import cloudinary.uploader
+from fastapi import HTTPException, status
 from typing import Tuple
 from PIL import Image
 from io import BytesIO
@@ -72,3 +73,64 @@ class ImageService(AgentModel):
             folder="nst_images",
         )
         return result["secure_url"], result["public_id"]
+    
+    def remove_image(self, image_id: str, user_id: str) -> dict[str, str | bool]:
+        response = (
+            self.supabase.table("images")
+            .select("id,user_id,content_key,style_key,generated_key")
+            .eq("id", image_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        rows = getattr(response, "data", None)
+        if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Image not found",
+            )
+
+        image_record = rows[0]
+        public_ids = [
+            image_record.get("content_key"),
+            image_record.get("style_key"),
+            image_record.get("generated_key"),
+        ]
+        if not all(isinstance(public_id, str) and public_id for public_id in public_ids):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Image record is missing Cloudinary public IDs",
+            )
+
+        try:
+            for public_id in public_ids:
+                result = cloudinary.uploader.destroy(public_id, invalidate=True)
+                if result.get("result") not in {"ok", "not found"}:
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail="Cloudinary did not confirm image deletion",
+                    )
+        except HTTPException:
+            raise
+        except Exception as error:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Cloudinary image deletion failed",
+            ) from error
+
+        delete_response = (
+            self.supabase.table("images")
+            .delete()
+            .eq("id", image_id)
+            .eq("user_id", user_id)
+            .select("id")
+            .execute()
+        )
+        deleted_rows = getattr(delete_response, "data", None)
+        if not isinstance(deleted_rows, list) or not deleted_rows:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Cloudinary assets were removed, but the image record could not be deleted",
+            )
+
+        return {"deleted": True, "image_id": image_id}
+        

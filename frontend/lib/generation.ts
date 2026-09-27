@@ -1,4 +1,5 @@
 export interface GenerationHistoryItem {
+  id: string;
   content_image: string;
   style_image: string;
   generated_image: string;
@@ -43,6 +44,7 @@ export function isGenerationHistoryItem(
   if (!value || typeof value !== "object") return false;
   const item = value as Record<string, unknown>;
   return (
+    typeof item.id === "string" &&
     typeof item.content_image === "string" &&
     typeof item.style_image === "string" &&
     typeof item.generated_image === "string"

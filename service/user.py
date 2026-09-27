@@ -40,7 +40,7 @@ def get_user_data(user_id: str) -> UserData:
         raise RuntimeError(f"User data for id {user_id} is not a valid mapping")
     images_response = (
         supabase.table("images")
-        .select("content_image,style_image,generated_image")
+        .select("id,content_image,style_image,generated_image")
         .eq("user_id", user_id)
         .execute()
     )
@@ -51,19 +51,26 @@ def get_user_data(user_id: str) -> UserData:
     images: list[ImageData] = []
     for image_row in image_rows:
         if not isinstance(image_row, Mapping):
-            raise RuntimeError(f"Image data for user id {user_id} contains an invalid record")
+            continue
         content_image = image_row.get("content_image")
         style_image = image_row.get("style_image")
+        img_id = image_row.get("id")
         generated_image = image_row.get("generated_image")
+        if isinstance(img_id, (str, int)) and not isinstance(img_id, bool):
+            image_id = str(img_id)
+        else:
+            continue
         if not all(
             isinstance(value, str)
             for value in (content_image, style_image, generated_image)
         ):
-            raise RuntimeError(f"Image data for user id {user_id} contains invalid image values")
+            continue
         images.append(ImageData(
+            id=image_id,
             content_image=cast(str, content_image),
             style_image=cast(str, style_image),
             generated_image=cast(str, generated_image),
+            created_at=cast(str, image_row.get("created_at")) if isinstance(image_row.get("created_at"), str) else None,
         ))
     return UserData(
         username=cast(str, user_data.get("name", "")),

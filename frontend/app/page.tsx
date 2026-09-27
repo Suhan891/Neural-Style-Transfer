@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { HistoryGallery } from "@/components/generate/history-gallery";
 import { HistoryPreviewDialog } from "@/components/generate/history-preview-dialog";
+import { DeleteGenerationDialog } from "@/components/generate/delete-generation-dialog";
 import { ImageUploadCard } from "@/components/generate/image-upload-card";
 import { OutputStage } from "@/components/generate/output-stage";
 import { useGenerationWorkspace } from "@/hooks/use-generation-workspace";
@@ -16,6 +17,8 @@ export default function GeneratePage() {
   const [previewItem, setPreviewItem] = useState<GenerationHistoryItem | null>(
     null,
   );
+  const [deleteCandidate, setDeleteCandidate] =
+    useState<GenerationHistoryItem | null>(null);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f1f2e9] text-[#203d31]">
@@ -152,7 +155,10 @@ export default function GeneratePage() {
               items={workspace.isAuthenticated ? workspace.history : []}
               isLoading={workspace.isAuthenticated && workspace.historyLoading}
               error={workspace.isAuthenticated ? workspace.historyError : null}
+              deleteError={workspace.deleteError}
+              deletingImageId={workspace.deletingImageId}
               onSelect={setPreviewItem}
+              onDelete={setDeleteCandidate}
             />
           </section>
         </div>
@@ -163,6 +169,13 @@ export default function GeneratePage() {
         onOpenChange={(open) => {
           if (!open) setPreviewItem(null);
         }}
+      />
+      <DeleteGenerationDialog
+        item={deleteCandidate}
+        isDeleting={workspace.deletingImageId === deleteCandidate?.id}
+        error={workspace.deleteError}
+        onClose={() => setDeleteCandidate(null)}
+        onConfirm={workspace.deleteImage}
       />
     </main>
   );
